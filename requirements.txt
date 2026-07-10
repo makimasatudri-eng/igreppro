@@ -1,2 +1,2 @@
 httpx==0.28.1
-user-agents==0.1.13
+user-agent==0.1.13
