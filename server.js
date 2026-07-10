@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
 
-const TOKEN = "8739380013:AAF4g1U4Lp22fXXkXa3MpZcut7YVhIfQmIU";
+const TOKEN = process.env.TELEGRAM_TOKEN;
 const ADMIN_ID = "7145835109";
 
 if (!TOKEN) {
