@@ -46,10 +46,10 @@ bot.on('message', (msg) => {
 
     if (text === '/start') {
         const isAllowed = allowedUsers.includes(userId);
-        const webAppUrl = process.env.WEB_APP_URL;
+        const webAppUrl = process.env.WEB_APP_URL || "https://your-vercel-app-url.vercel.app";
 
         if (!webAppUrl) {
-            return bot.sendMessage(chatId, "❌ WEB_APP_URL not configured on Netlify!");
+            return bot.sendMessage(chatId, "❌ WEB_APP_URL not configured on Vercel!");
         }
 
         let opts = {};
@@ -279,7 +279,7 @@ app.post('/api/profile', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
