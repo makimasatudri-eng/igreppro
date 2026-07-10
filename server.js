@@ -1,4 +1,4 @@
-// server.js - Final with Telegram Bot
+// server.js - Final with Telegram Bot (Railway Deploy Ready)
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const axios = require('axios');
@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { exec } = require('child_process');
 
 const TOKEN = "8739380013:AAF4g1U4Lp22fXXkXa3MpZcut7YVhIfQmIU";
 const ADMIN_ID = "7145835109";
@@ -117,7 +118,7 @@ bot.on('message', (msg) => {
     }
 });
 
-// ===================== EXPRESS ROUTES (Aapke original) =====================
+// ===================== EXPRESS ROUTES =====================
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -127,7 +128,7 @@ app.get('/api/users', (req, res) => {
     res.json({ allowedUsers });
 });
 
-// Username check (UNCHANGED)
+// Username check
 app.post('/check-username', async (req, res) => {
     let { username } = req.body;
 
@@ -145,7 +146,7 @@ app.post('/check-username', async (req, res) => {
         const android = "android-" + Math.random().toString(36).substring(2, 12);
 
         const payload = {
-            params: `{"client_input_params":{"aac":"{\\"aac_init_timestamp\\":${Math.floor(Date.now()/1000)},\\"aacjid\\":\\"${uuidv4()}\\",\\"aaccs\\":\\"${Math.random().toString(36).substring(2,40)}\\"}","search_query":"${username}","search_screen_type":"email_or_username","ig_android_qe_device_id":"${device}"},"server_params":{"event_request_id":"${uuidv4()}","device_id":"${android}","family_device_id":"${family}","qe_device_id":"${device}"}}`,
+            params: `{"client_input_params":{"aac":"{\\"aac_init_timestamp\\":${Math.floor(Date.now()/1000)},\\"aacjid\\":\\"${uuidv4()}\\",\\"aaccs\\":\\"${Math.random().toString(36).substring(2,40)}\\"}","search_query":"${username}","search_screen_type":"email_or_username","ig_android_qe_device_id":"${device}"}}`,
             bk_client_context: '{"bloks_version":"5e47baf35c5a270b44c8906c8b99063564b30ef69779f3dee0b828bee2e4ef5b","styles_id":"instagram"}',
             bloks_versioning_id: "5e47baf35c5a270b44c8906c8b99063564b30ef69779f3dee0b828bee2e4ef5b"
         };
@@ -171,7 +172,6 @@ app.post('/check-username', async (req, res) => {
         if (text.includes(`"${username}"`) && !text.includes('"not_found"') && !text.includes('no_results')) {
             return res.json({ exists:true, username });
         }
-
     } catch(error) {
         console.log("Error:",error.message);
     }
@@ -226,32 +226,36 @@ app.post('/api/remove-user',(req,res)=>{
     res.json({ success:true, allowedUsers });
 });
 
-// Railway compatible
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT,'0.0.0.0',()=>{
-    console.log(`🚀 Server running on port ${PORT}`);
-});
-
-// ===================== PYTHON INTEGRATION FOR PROFILE (Debug Mode) =====================
-const { exec } = require('child_process');
-
+// ===================== PYTHON PROFILE (Railway Ready) =====================
 app.post('/api/profile', (req, res) => {
     let { username } = req.body;
     if (!username) return res.json({ error: "Username is required" });
 
     username = username.trim().toLowerCase().replace('@', '');
 
-    const pythonScript = path.join(__dirname, 'insta-profile.py');
+    console.log(`[PROFILE] Running for: ${username}`);
+
+    // === RAILWAY PATH DETECTION ===
+    const basePath = path.join(__dirname, '..'); // Railway app root
+    let pythonScript = path.join(__dirname, 'insta-profile.py');
+
+    if (fs.existsSync(path.join(basePath, 'insta-profile.py'))) {
+        pythonScript = path.join(basePath, 'insta-profile.py');
+    }
+
     const tempInputFile = path.join(__dirname, 'temp_input.txt');
 
     fs.writeFileSync(tempInputFile, `${username}\n1`);
 
-    console.log(`[DEBUG] Running Python for: ${username}`);
+    console.log(`[DEBUG] Running Python: ${pythonScript}`);
 
-    const command = `python3 "${pythonScript}" < "${tempInputFile}"`;
+    const command = `python "${pythonScript}" < "${tempInputFile}"`;
 
-    exec(command, { timeout: 20000, encoding: 'utf8' }, (error, stdout, stderr) => {
+    exec(command, { 
+        timeout: 20000, 
+        encoding: 'utf8',
+        cwd: basePath  // Run from app root (important for Railway)
+    }, (error, stdout, stderr) => {
         try { fs.unlinkSync(tempInputFile); } catch(e) {}
 
         if (error) {
@@ -295,4 +299,11 @@ app.post('/api/profile', (req, res) => {
             return res.json({ error: "Parsing failed" });
         }
     });
+});
+
+// Railway compatible
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT,'0.0.0.0',()=>{
+    console.log(`🚀 Server running on port ${PORT}`);
 });
