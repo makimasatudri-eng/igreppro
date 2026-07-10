@@ -16,10 +16,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(process.cwd(), 'public')));
 
 // FIXED: user.json
-const USERS_FILE = path.join(__dirname, 'user.json');
+const USERS_FILE = path.join(process.cwd(), 'user.json');
 
 let allowedUsers = ["7968968395"];
 
@@ -49,7 +49,7 @@ bot.on('message', (msg) => {
         const webAppUrl = process.env.WEB_APP_URL;
 
         if (!webAppUrl) {
-            return bot.sendMessage(chatId, "❌ WEB_APP_URL not configured on Railway!");
+            return bot.sendMessage(chatId, "❌ WEB_APP_URL not configured on Netlify!");
         }
 
         let opts = {};
@@ -110,7 +110,7 @@ bot.on('message', (msg) => {
 
 // ===================== EXPRESS ROUTES =====================
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
 app.get('/api/users', (req, res) => {
@@ -190,7 +190,7 @@ app.post('/api/login', (req, res) => {
     res.json({ success: false });
 });
 
-// Admin APIs (updated)
+// Admin APIs
 app.post('/api/add-user', (req, res) => {
     const { userId, adminId } = req.body;
     if (adminId !== "7968968395") return res.json({ success: false });
@@ -217,15 +217,15 @@ app.get('/api/allowed-users', (req, res) => {
     res.json({ allowedUsers });
 });
 
-// ===================== PYTHON INTEGRATION (UNCHANGED) =====================
+// ===================== PYTHON INTEGRATION =====================
 app.post('/api/profile', (req, res) => {
     let { username } = req.body;
     if (!username) return res.json({ error: "Username is required" });
 
     username = username.trim().toLowerCase().replace('@', '');
 
-    const pythonScript = path.join(__dirname, 'insta-profile.py');
-    const tempInputFile = path.join(__dirname, 'temp_input.txt');
+    const pythonScript = path.join(process.cwd(), 'insta-profile.py');
+    const tempInputFile = path.join(process.cwd(), 'temp_input.txt');
 
     fs.writeFileSync(tempInputFile, `${username}\n1`);
 
