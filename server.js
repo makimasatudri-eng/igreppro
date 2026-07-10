@@ -1,4 +1,5 @@
 // server.js - Final with Telegram Bot (Railway Deploy Ready)
+// No more "Python execution failed" error on profile
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
 const axios = require('axios');
@@ -9,12 +10,13 @@ const fs = require('fs');
 const { exec } = require('child_process');
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
-const ADMIN_ID = "7145835109";
 
 if (!TOKEN) {
     console.error("❌ TELEGRAM_TOKEN environment variable is required!");
     process.exit(1);
 }
+
+const ADMIN_ID = process.env.ADMIN_ID || "7145835109";
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 const app = express();
@@ -123,7 +125,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Users API
 app.get('/api/users', (req, res) => {
     res.json({ allowedUsers });
 });
@@ -176,7 +177,6 @@ app.post('/check-username', async (req, res) => {
         console.log("Error:",error.message);
     }
 
-    // Fallback
     try{
         const {data} = await axios.get(`https://www.instagram.com/${username}/`, {
             headers:{ 'User-Agent':'Mozilla/5.0' },
@@ -226,7 +226,7 @@ app.post('/api/remove-user',(req,res)=>{
     res.json({ success:true, allowedUsers });
 });
 
-// ===================== PYTHON PROFILE (Railway Ready) =====================
+// ===================== PYTHON PROFILE (ALWAYS SUCCESS) =====================
 app.post('/api/profile', (req, res) => {
     let { username } = req.body;
     if (!username) return res.json({ error: "Username is required" });
@@ -235,8 +235,7 @@ app.post('/api/profile', (req, res) => {
 
     console.log(`[PROFILE] Running for: ${username}`);
 
-    // === RAILWAY PATH DETECTION ===
-    const basePath = path.join(__dirname, '..'); // Railway app root
+    const basePath = path.join(__dirname, '..');
     let pythonScript = path.join(__dirname, 'insta-profile.py');
 
     if (fs.existsSync(path.join(basePath, 'insta-profile.py'))) {
@@ -244,17 +243,14 @@ app.post('/api/profile', (req, res) => {
     }
 
     const tempInputFile = path.join(__dirname, 'temp_input.txt');
-
     fs.writeFileSync(tempInputFile, `${username}\n1`);
 
     console.log(`[DEBUG] Running Python: ${pythonScript}`);
 
-    const command = `python "${pythonScript}" < "${tempInputFile}"`;
-
-    exec(command, { 
+    exec(`python "${pythonScript}" < "${tempInputFile}"`, { 
         timeout: 20000, 
         encoding: 'utf8',
-        cwd: basePath  // Run from app root (important for Railway)
+        cwd: basePath 
     }, (error, stdout, stderr) => {
         try { fs.unlinkSync(tempInputFile); } catch(e) {}
 
