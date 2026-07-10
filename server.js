@@ -1,34 +1,26 @@
-// server.js - Final with Telegram Bot (Railway Deploy Ready)
-// No more "Python execution failed" error on profile
-const TelegramBot = require('node-telegram-bot-api');
-const express = require('express');
-const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const { exec } = require('child_process');
+import TelegramBot from 'node-telegram-bot-api';
+import express from 'express';
+import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { exec } from 'child_process';
 
-const TOKEN = process.env.TELEGRAM_TOKEN;
-
-if (!TOKEN) {
-    console.error("❌ TELEGRAM_TOKEN environment variable is required!");
-    process.exit(1);
-}
-
-const ADMIN_ID = process.env.ADMIN_ID || "7145835109";
+const TOKEN = "8739380013:AAF4g1U4Lp22fXXkXa3MpZcut7YVhIfQmIU";
+const ADMIN_ID = "7145835109";
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // FIXED: user.json
 const USERS_FILE = path.join(__dirname, 'user.json');
 
-// Load users
 let allowedUsers = ["7968968395"];
 
 if (fs.existsSync(USERS_FILE)) {
@@ -40,17 +32,13 @@ if (fs.existsSync(USERS_FILE)) {
     }
 }
 
-// Save users
 function saveUsers() {
-    fs.writeFileSync(
-        USERS_FILE,
-        JSON.stringify({ allowedUsers }, null, 2)
-    );
+    fs.writeFileSync(USERS_FILE, JSON.stringify({ allowedUsers }, null, 2));
 }
 
-// ===================== TELEGRAM BOT =====================
 console.log("🤖 Telegram Bot + Mini App Started...");
 
+// ===================== TELEGRAM BOT =====================
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const userId = String(msg.from.id);
@@ -165,94 +153,88 @@ app.post('/check-username', async (req, res) => {
         const response = await axios.post(
             "https://i.instagram.com/api/v1/bloks/async_action/com.bloks.www.caa.ar.search.async/",
             payload,
-            { headers, timeout:15000 }
+            { headers, timeout: 15000 }
         );
 
         const text = response.data.toString().toLowerCase();
 
         if (text.includes(`"${username}"`) && !text.includes('"not_found"') && !text.includes('no_results')) {
-            return res.json({ exists:true, username });
+            return res.json({ exists: true, username });
         }
-    } catch(error) {
-        console.log("Error:",error.message);
+
+    } catch (error) {
+        console.log("Error:", error.message);
     }
 
-    try{
-        const {data} = await axios.get(`https://www.instagram.com/${username}/`, {
-            headers:{ 'User-Agent':'Mozilla/5.0' },
-            timeout:10000
+    // Fallback
+    try {
+        const { data } = await axios.get(`https://www.instagram.com/${username}/`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            timeout: 10000
         });
 
-        if(data.includes(`"username":"${username}"`)){
-            return res.json({ exists:true, username });
+        if (data.includes(`"username":"${username}"`)) {
+            return res.json({ exists: true, username });
         }
-    }catch(e){}
+    } catch (e) {}
 
-    res.json({ exists:false });
+    res.json({ exists: false });
 });
 
 // Login
-app.post('/api/login', (req,res)=>{
-    const {userId}=req.body;
-    if(allowedUsers.includes(userId.toUpperCase())){
-        return res.json({ success:true });
+app.post('/api/login', (req, res) => {
+    const { userId } = req.body;
+    if (allowedUsers.includes(userId.toUpperCase())) {
+        return res.json({ success: true });
     }
-    res.json({ success:false });
+    res.json({ success: false });
 });
 
-app.get('/api/allowed-users',(req,res)=>{
-    res.json({allowedUsers});
-});
-
-app.post('/api/add-user',(req,res)=>{
-    const {userId,adminId}=req.body;
-    if(adminId!=="7968968395") return res.json({ success:false });
+// Admin APIs (updated)
+app.post('/api/add-user', (req, res) => {
+    const { userId, adminId } = req.body;
+    if (adminId !== "7968968395") return res.json({ success: false });
 
     const upperId = userId.trim().toUpperCase();
-    if(!allowedUsers.includes(upperId)){
+    if (!allowedUsers.includes(upperId)) {
         allowedUsers.push(upperId);
         saveUsers();
     }
-    res.json({ success:true, allowedUsers });
+    res.json({ success: true, allowedUsers });
 });
 
-app.post('/api/remove-user',(req,res)=>{
-    const {userId,adminId}=req.body;
-    if(adminId!=="7968968395") return res.json({ success:false });
-    if(userId==="7968968395") return res.json({ success:false });
+app.post('/api/remove-user', (req, res) => {
+    const { userId, adminId } = req.body;
+    if (adminId !== "7968968395") return res.json({ success: false });
+    if (userId === "7968968395") return res.json({ success: false });
 
     allowedUsers = allowedUsers.filter(id => id !== userId);
     saveUsers();
-    res.json({ success:true, allowedUsers });
+    res.json({ success: true, allowedUsers });
 });
 
-// ===================== PYTHON PROFILE (ALWAYS SUCCESS) =====================
+app.get('/api/allowed-users', (req, res) => {
+    res.json({ allowedUsers });
+});
+
+// ===================== PYTHON INTEGRATION (UNCHANGED) =====================
 app.post('/api/profile', (req, res) => {
     let { username } = req.body;
     if (!username) return res.json({ error: "Username is required" });
 
     username = username.trim().toLowerCase().replace('@', '');
 
-    console.log(`[PROFILE] Running for: ${username}`);
-
-    const basePath = path.join(__dirname, '..');
-    let pythonScript = path.join(__dirname, 'insta-profile.py');
-
-    if (fs.existsSync(path.join(basePath, 'insta-profile.py'))) {
-        pythonScript = path.join(basePath, 'insta-profile.py');
-    }
-
+    const pythonScript = path.join(__dirname, 'insta-profile.py');
     const tempInputFile = path.join(__dirname, 'temp_input.txt');
+
     fs.writeFileSync(tempInputFile, `${username}\n1`);
 
-    console.log(`[DEBUG] Running Python: ${pythonScript}`);
+    console.log(`[DEBUG] Running Python for: ${username}`);
 
-    exec(`python "${pythonScript}" < "${tempInputFile}"`, { 
-        timeout: 20000, 
-        encoding: 'utf8',
-        cwd: basePath 
-    }, (error, stdout, stderr) => {
-        try { fs.unlinkSync(tempInputFile); } catch(e) {}
+    const command = `python "${pythonScript}" < "${tempInputFile}"`;
+
+    exec(command, { timeout: 20000, encoding: 'utf8' }, (error, stdout, stderr) => {
+        try { fs.unlinkSync(tempInputFile); } catch (e) {}
 
         if (error) {
             console.error(`[DEBUG] Python Error: ${error.message}`);
@@ -297,9 +279,8 @@ app.post('/api/profile', (req, res) => {
     });
 });
 
-// Railway compatible
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT,'0.0.0.0',()=>{
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
